@@ -47,6 +47,12 @@ class MoneyApp(tk.Tk):
         )
         self.cyclic_list.pack(fill="both", expand=True, padx=5, pady=5)
 
+        ttk.Button(
+            cyclic_frame,
+            text="DELETE SELECTED",
+            command=self.delete_cyclic_income
+        ).pack(pady=(0, 5))
+
         cyclic_add = ttk.Frame(cyclic_frame)
         cyclic_add.pack(fill="x", padx=5, pady=5)
 
@@ -88,6 +94,12 @@ class MoneyApp(tk.Tk):
         )
         self.extra_list.pack(fill="both", expand=True, padx=5, pady=5)
 
+        ttk.Button(
+            extra_frame,
+            text="DELETE SELECTED",
+            command=self.delete_extra_income
+        ).pack(pady=(0, 5))
+
         extra_add = ttk.Frame(extra_frame)
         extra_add.pack(fill="x", padx=5, pady=5)
 
@@ -119,40 +131,40 @@ class MoneyApp(tk.Tk):
         style = ttk.Style()
         style.configure(
             "Big.TButton",
-            font=("Segoe UI", 12, "bold")
+            font=("Segoe UI", 10, "bold")
         )
 
         ttk.Button(
             buttons,
             text="START",
-            width=16,
+            width=11,
             style="Big.TButton",
             command=self.start_calculation
-        ).pack(side="left", padx=12, ipady=6)
+        ).pack(side="left", padx=12, ipady=3)
 
         ttk.Button(
             buttons,
             text="EXIT",
-            width=16,
+            width=11,
             command=self.destroy,
             style="Big.TButton"
-        ).pack(side="left", padx=12, ipady=6)
+        ).pack(side="left", padx=12, ipady=3)
 
         ttk.Button(
             buttons,
             text="SAVE DEPOSITS",
-            width=16,
+            width=11,
             command=self.save_deposits,
             style="Big.TButton"
-        ).pack(side="left", padx=12, ipady=6)
+        ).pack(side="left", padx=12, ipady=3)
 
         ttk.Button(
             buttons,
             text="LOAD DEPOSITS",
-            width=16,
+            width=11,
             command=self.load_deposits,
             style="Big.TButton"
-        ).pack(side="left", padx=12, ipady=6)
+        ).pack(side="left", padx=12, ipady=3)
 
     # ---------- Owned money ----------
     def set_owned_money(self):
@@ -251,6 +263,31 @@ class MoneyApp(tk.Tk):
                 f_lo = f_mid
 
         return (lo + hi) / 2
+
+    # ---------- Delete deposits ----------
+    def delete_cyclic_income(self):
+        selection = self.cyclic_list.curselection()
+
+        if not selection:
+            messagebox.showwarning(
+                "No selection",
+                "Select a cyclic deposit to delete."
+            )
+            return
+
+        self.cyclic_list.delete(selection[0])
+
+    def delete_extra_income(self):
+        selection = self.extra_list.curselection()
+
+        if not selection:
+            messagebox.showwarning(
+                "No selection",
+                "Select an extra deposit to delete."
+            )
+            return
+
+        self.extra_list.delete(selection[0])
 
     # ---------- Save / Load deposits ----------
     def save_deposits(self):
