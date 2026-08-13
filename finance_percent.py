@@ -8,7 +8,7 @@ class MoneyApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Money App")
-        self.geometry("650x620")
+        self.geometry("690x720")
 
         mono_font = ("Courier New", 10)
 
@@ -137,7 +137,7 @@ class MoneyApp(tk.Tk):
         ttk.Button(
             buttons,
             text="START",
-            width=11,
+            width=20,
             style="Big.TButton",
             command=self.start_calculation
         ).pack(side="left", padx=12, ipady=3)
@@ -145,7 +145,7 @@ class MoneyApp(tk.Tk):
         ttk.Button(
             buttons,
             text="EXIT",
-            width=11,
+            width=20,
             command=self.destroy,
             style="Big.TButton"
         ).pack(side="left", padx=12, ipady=3)
@@ -153,7 +153,7 @@ class MoneyApp(tk.Tk):
         ttk.Button(
             buttons,
             text="SAVE DEPOSITS",
-            width=11,
+            width=20,
             command=self.save_deposits,
             style="Big.TButton"
         ).pack(side="left", padx=12, ipady=3)
@@ -161,7 +161,7 @@ class MoneyApp(tk.Tk):
         ttk.Button(
             buttons,
             text="LOAD DEPOSITS",
-            width=11,
+            width=20,
             command=self.load_deposits,
             style="Big.TButton"
         ).pack(side="left", padx=12, ipady=3)
@@ -308,9 +308,12 @@ class MoneyApp(tk.Tk):
         # Save only deposits: amount and date.
         for i in range(self.cyclic_list.size()):
             line = self.cyclic_list.get(i)
-            amount = float(line[:8])
-            deposit_date = line[10:20]
-            end_date = line[22:32].strip() if len(line) >= 32 else ""
+            parts = line.split()
+            amount = float(parts[0])
+            deposit_date = parts[1]
+            end_date = ""
+            if len(parts) >= 3 and self.validate_date(parts[2]):
+                end_date = parts[2]
             data["cyclic"].append({
                 "amount": amount,
                 "date": deposit_date,
@@ -469,14 +472,15 @@ class MoneyApp(tk.Tk):
         # ---- Cyclic income (monthly deposits) ----
         for i in range(self.cyclic_list.size()):
             line = self.cyclic_list.get(i)
-            amount = float(line[:8])
-            start = datetime.strptime(line[10:20], "%Y-%m-%d").date()
+            parts = line.split()
+            amount = float(parts[0])
+            start = datetime.strptime(parts[1], "%Y-%m-%d").date()
 
             # Empty end date means the deposit repeats through today.
             end_date = None
-            if len(line) >= 32 and line[22:32].strip():
+            if len(parts) >= 3 and self.validate_date(parts[2]):
                 end_date = datetime.strptime(
-                    line[22:32].strip(), "%Y-%m-%d"
+                    parts[2], "%Y-%m-%d"
                 ).date()
 
             last_date = today if end_date is None else min(end_date, today)
