@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 
 class MoneyApp(tk.Tk):
@@ -488,10 +488,26 @@ class MoneyApp(tk.Tk):
             current = start
             while current <= last_date:
                 cashflows.append((current, -amount))
-                # advance one month
-                year = current.year + (current.month // 12)
-                month = (current.month % 12) + 1
-                current = current.replace(year=year, month=month)
+                # Advance one month, keeping the original day when possible.
+                # If that day does not exist in the next month, use its last day.
+                if current.month == 12:
+                    next_year = current.year + 1
+                    next_month = 1
+                else:
+                    next_year = current.year
+                    next_month = current.month + 1
+                if next_month == 12:
+                    following_year = next_year + 1
+                    following_month = 1
+                else:
+                    following_year = next_year
+                    following_month = next_month + 1
+                last_day = (
+                    date(following_year, following_month, 1)
+                    - timedelta(days=1)
+                ).day
+                next_day = min(current.day, last_day)
+                current = date(next_year, next_month, next_day)
 
         # ---- Final value ----
         cashflows.append((today, owned))
