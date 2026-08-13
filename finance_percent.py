@@ -65,9 +65,17 @@ class MoneyApp(tk.Tk):
             row=1, column=1, sticky="ew", padx=5
         )
 
+        ttk.Label(cyclic_add, text="End date (YYYY-MM-DD, optional)").grid(
+            row=2, column=0, sticky="w"
+        )
+        self.cyclic_end_date = tk.StringVar()
+        ttk.Entry(cyclic_add, textvariable=self.cyclic_end_date).grid(
+            row=2, column=1, sticky="ew", padx=5
+        )
+
         ttk.Button(
             cyclic_add, text="Add", command=self.add_cyclic_income
-        ).grid(row=2, column=0, columnspan=2, pady=5)
+        ).grid(row=3, column=0, columnspan=2, pady=5)
 
         cyclic_add.columnconfigure(1, weight=1)
 
@@ -179,10 +187,14 @@ class MoneyApp(tk.Tk):
         today = date.today()
         return (today.year - d.year) * 12 + (today.month - d.month)
 
-    def format_entry(self, amount, d):
+    def format_entry(self, amount, d, end_date=None):
         amount_f = f"{float(amount):8.2f}"
         date_s = d.strftime("%Y-%m-%d")
         months = self.months_ago(d)
+
+        if end_date is not None:
+            return f"{amount_f}  {date_s}  {end_date.strftime('%Y-%m-%d')}  {months:3d} months ago"
+
         return f"{amount_f}  {date_s}  {months:3d} months ago"
 
     def calculate_xirr(self, cashflows):
@@ -261,9 +273,11 @@ class MoneyApp(tk.Tk):
             line = self.cyclic_list.get(i)
             amount = float(line[:8])
             deposit_date = line[10:20]
+            end_date = line[22:32].strip() if len(line) >= 32 else ""
             data["cyclic"].append({
                 "amount": amount,
-                "date": deposit_date
+                "date": deposit_date,
+                "end_date": end_date
             })
 
         for i in range(self.extra_list.size()):
@@ -313,7 +327,17 @@ class MoneyApp(tk.Tk):
                 deposit_date = self.validate_date(str(item["date"]))
                 if deposit_date is None:
                     raise ValueError(f"Invalid cyclic deposit date: {item['date']}")
-                validated_cyclic.append((amount, deposit_date))
+
+                raw_end_date = item.get("end_date", "")
+                end_date = None
+                if raw_end_date:
+                    end_date = self.validate_date(str(raw_end_date))
+                    if end_date is None:
+                        raise ValueError(f"Invalid cyclic deposit end date: {raw_end_date}")
+                    if end_date < deposit_date:
+                        raise ValueError("Cyclic deposit end date cannot be before start date.")
+
+                validated_cyclic.append((amount, deposit_date, end_date))
 
             validated_extra = []
             for item in extra:
@@ -328,9 +352,9 @@ class MoneyApp(tk.Tk):
             self.cyclic_list.delete(0, tk.END)
             self.extra_list.delete(0, tk.END)
 
-            for amount, deposit_date in validated_cyclic:
+            for amount, deposit_date, end_date in validated_cyclic:
                 self.cyclic_list.insert(
-                    tk.END, self.format_entry(amount, deposit_date)
+                    tk.END, self.format_entry(amount, deposit_date, end_date)
                 )
 
             for amount, deposit_date in validated_extra:
@@ -351,13 +375,27 @@ class MoneyApp(tk.Tk):
 
         d = self.validate_date(self.cyclic_date.get())
         if not d:
-            messagebox.showerror("Invalid date", "Date must be YYYY-MM-DD.")
+            messagebox.showerror("Invalid date", "Start date must be YYYY-MM-DD.")
             return
 
+        end_date_text = self.cyclic_end_date.get().strip()
+        end_date = None
+
+        if end_date_text:
+            end_date = self.validate_date(end_date_text)
+            if not end_date:
+                messagebox.showerror("Invalid date", "End date must be YYYY-MM-DD.")
+                return
+
+            if end_date < d:
+                messagebox.showerror("Invalid date", "End date cannot be before start date.")
+                return
+
         self.cyclic_list.insert(
-            tk.END, self.format_entry(self.cyclic_amount.get(), d)
+            tk.END, self.format_entry(self.cyclic_amount.get(), d, end_date)
         )
         self.cyclic_amount.set("")
+        self.cyclic_end_date.set("")
 
     def add_extra_income(self):
         if not self.validate_amount(self.extra_amount.get()):
@@ -397,8 +435,17 @@ class MoneyApp(tk.Tk):
             amount = float(line[:8])
             start = datetime.strptime(line[10:20], "%Y-%m-%d").date()
 
+            # Empty end date means the deposit repeats through today.
+            end_date = None
+            if len(line) >= 32 and line[22:32].strip():
+                end_date = datetime.strptime(
+                    line[22:32].strip(), "%Y-%m-%d"
+                ).date()
+
+            last_date = today if end_date is None else min(end_date, today)
+
             current = start
-            while current <= today:
+            while current <= last_date:
                 cashflows.append((current, -amount))
                 # advance one month
                 year = current.year + (current.month // 12)
